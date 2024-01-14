@@ -29,7 +29,7 @@ async def on_message(message):
 
         # Make a request to the Football Data API to get match information
         uri = 'https://api.football-data.org/v4/teams/86/matches?status=SCHEDULED'
-        headers = {'X-Auth-Token': '06d964592a1a468cbfe3b32b7df069b4'}  # Replace 'YOUR_API_KEY' with your actual API key
+        headers = {'X-Auth-Token': 'API_KEY'}  # Replace 'YOUR_API_KEY' with your actual API key
         response = requests.get(uri, headers=headers)
         # await message.channel.send(f'Response content: {response.text}')
         print(response.text)
@@ -48,7 +48,7 @@ async def on_message(message):
     if message.content.startswith('$get_standings_CL'):
         # Replace 'YOUR_API_KEY' with your actual API key
         uri = 'https://api.football-data.org/v4/competitions/PD/standings'
-        headers = {'X-Auth-Token': '06d964592a1a468cbfe3b32b7df069b4'}
+        headers = {'X-Auth-Token': 'API_KEY'}
         response = requests.get(uri, headers=headers)
 
         if response.status_code == 200:
