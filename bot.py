@@ -3,7 +3,7 @@ import requests
 import os
 from datetime import datetime
 from dotenv import load_dotenv
-
+import asyncio
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
@@ -26,31 +26,56 @@ async def on_message(message):
         await message.channel.send(f'HOLA FOOTBALL FANATIC!![{message.author}] Use $help for a list of available commands')
     
     if message.content.startswith('$help'):
-        await message.channel.send('USE THE FOLLOWING COMMANDS TO INTERACT WITH ME!!\n $get_standings: UEFA  UCL real time standings\n $get_today_matches: List of scheduled matches on that day')
+        await message.channel.send('USE THE FOLLOWING COMMANDS TO INTERACT WITH ME!!\n $get_standings: Premier League real time standings\n $get_today_matches: List of scheduled matches today\n$get_matches: get upcoming fixtures for your team')
 
     if message.content.startswith('$get_matches'):
-
-        # Make a request to the Football Data API to get match information
-        uri = 'https://api.football-data.org/v4/teams/86/matches?status=SCHEDULED'
+     await message.channel.send('Please enter the name of the team:')
+     try:
+        # Wait for the user's response
+        user_response = await client.wait_for('message', timeout=100.0)
+        team_name = user_response.content.lower()  # Convert team name to lowercase for case-insensitivity
+        # Make a request to the Football Data API to get team information
+        uri = f'https://api.football-data.org/v4/competitions/CL/teams'
         headers = {'X-Auth-Token': API_KEY}  # Replace 'YOUR_API_KEY' with your actual API key
         response = requests.get(uri, headers=headers)
-        # await message.channel.send(f'Response content: {response.text}')
-        print(response.text)
-        a=""
         if response.status_code == 200:
-            # If the request is successful, print match information
-            count=0
-            for match in response.json()['matches']:
-                a=a+'UPCOMING FOR REAL MADRID:' f'Match: {match["homeTeam"]["name"]} vs {match["awayTeam"]["name"]}'+'\n'
-            await message.channel.send(a)
-            
+            teams = response.json()['teams']
+            print(teams)
+            team_id = None
+            # Find the ID of the selected team
+            for team in teams:
+                 if team_name in team['name'].lower() or any(alias.lower() == team_name for alias in team.get('shortName', [])):
+                    team_id = team['id']
+                    break
+            if team_id is not None:
+                # Make a request to the Football Data API to get match information for the selected team
+                uri = f'https://api.football-data.org/v2/teams/{team_id}/matches?status=SCHEDULED'
+                response = requests.get(uri, headers=headers)
+                if response.status_code == 200:
+                    # If the request is successful, print match information
+                    matches = response.json()['matches']
+                    if matches:
+                        await message.channel.send(f'Upcoming matches for {team_name.capitalize()}:')
+                        for match in matches:
+                            home_team = match['homeTeam']['name']
+                            away_team = match['awayTeam']['name']
+                            match_time = match['utcDate']
+                            await message.channel.send(f"{home_team} vs {away_team} - {match_time}")
+                    else:
+                        await message.channel.send(f"No upcoming matches found for {team_name.capitalize()}")
+                else:
+                    # If the request is unsuccessful, print an error message
+                    await message.channel.send(f'Error: Unable to fetch match information. Status code: {response.status_code}')
+            else:
+                await message.channel.send('Team not found. Please make sure you entered the correct team name.')
         else:
             # If the request is unsuccessful, print an error message
-            await message.channel.send(f'Error: Unable to fetch match information. Status code: {response.status_code}')
-   
+            await message.channel.send(f'Error: Unable to fetch team information. Status code: {response.status_code}')
+     except asyncio.TimeoutError:
+        await message.channel.send('Timeout: No response received. Please try again.')
     if message.content.startswith('$get_standings'):
         # Replace 'YOUR_API_KEY' with your actual API key
-        uri = 'https://api.football-data.org/v4/competitions/CL/standings'
+        uri = 'https://api.football-data.org/v4/competitions/PL/standings'
         headers = {'X-Auth-Token': API_KEY}
         response = requests.get(uri, headers=headers)
         if response.status_code == 200:
